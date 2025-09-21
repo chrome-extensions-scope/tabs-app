@@ -1,33 +1,60 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useState, useEffect } from 'react'
+import * as chromeAPI from './chrome-api'
+import * as openAIAPI from './openai-api';
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [tabList, setTabList] = useState<chrome.tabs.Tab[]>([])
+
+	const groupTabs = async () => {
+		const filteredTabs = tabList
+			.map((tab) => ({ id: tab.id, url: tab.url, title: tab.title }))
+			.filter(item => item.url !== 'chrome://newtab/')
+
+		// @ts-ignore
+		const result = await openAIAPI.categorizeTabs(filteredTabs);
+		await chromeAPI.groupTabs(result);
+	}
+
+	const removeAllTabsExceptCurrent = async () => {
+		const tabs = await chromeAPI.removeAllTabsExceptCurrent();
+		setTabList(tabs);
+	}
+
+	useEffect(() => {
+		async function f() {
+			const tabs = await chromeAPI.getTabsCurrentWindow();
+			setTabList(tabs);
+		}
+
+		f();
+	}, [])
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+			<h2>Tabs app v0</h2>
+			<div className="container">
+				<button onClick={removeAllTabsExceptCurrent}>Remove All</button>
+				<button onClick={groupTabs}>Group</button>
+			</div>
+      <div className="container">
+				{tabList
+					.map((item) =>
+						<div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0px' }}>
+							{<picture>
+                  <img
+                    src={item.favIconUrl || 'https://cdn-icons-png.flaticon.com/128/3585/3585596.png'}
+                    style={{ height: '32px', width: 'auto', display: 'inline-block' }}
+                    alt="icon"
+                  />
+								</picture>}
+							<p>{item.title}</p>
+						</div>)}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+			<div className="container" style={{ paddingTop: '10px' }}>
+				<textarea style={{ width : '100%', height: '70px' }} placeholder="Ask anything about your tabs"></textarea>
+				<button>Ask</button>
+			</div>
     </>
   )
 }
