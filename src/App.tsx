@@ -1,60 +1,82 @@
 import { useState, useEffect } from 'react'
+import { prefetchDNS, useFormStatus } from 'react-dom';
 import * as chromeAPI from './chrome-api'
 import * as openAIAPI from './openai-api';
-import './App.css'
+import * as utils from './utils';
+import type { FilteredTab } from './types';
+import './App.css';
+
+
+function Submit() {
+	const { pending } = useFormStatus();
+	return (
+		<button type="submit" disabled={pending}>
+			{pending ? 'Grouping...' : 'Group Tabs'}
+		</button>
+	);
+}
 
 function App() {
-  const [tabList, setTabList] = useState<chrome.tabs.Tab[]>([])
+	prefetchDNS('https://api.openai.com/v1/responses');
+	const [tabList, setTabList] = useState<FilteredTab[]>([]);
 
 	const groupTabs = async () => {
-		const filteredTabs = tabList
-			.map((tab) => ({ id: tab.id, url: tab.url, title: tab.title }))
-			.filter(item => item.url !== 'chrome://newtab/')
-
-		// @ts-ignore
+		const filteredTabs = utils.getFilteredTabs(tabList);
 		const result = await openAIAPI.categorizeTabs(filteredTabs);
 		await chromeAPI.groupTabs(result);
 	}
 
-	const removeAllTabsExceptCurrent = async () => {
-		const tabs = await chromeAPI.removeAllTabsExceptCurrent();
-		setTabList(tabs);
-	}
+	// const removeAllTabsExceptCurrent = async () => {
+	// 	const tabs = await chromeAPI.removeAllTabsExceptCurrent();
+	// 	setTabList(tabs);
+	// }
 
 	useEffect(() => {
-		async function f() {
-			const tabs = await chromeAPI.getTabsCurrentWindow();
-			setTabList(tabs);
-		}
+		const syncTabs = async () => {
+			const tabList = await chromeAPI.getTabsCurrentWindow();
+			const filteredTabs = utils.getFilteredTabs(tabList);
+			setTabList(filteredTabs);
+		};
 
-		f();
-	}, [])
+		async function setup() {
+			await syncTabs();
+
+			chrome.tabs.onCreated.addListener(syncTabs);
+			chrome.tabs.onRemoved.addListener(syncTabs);
+		}
+		setup();
+
+		return () => {
+			chrome.tabs.onCreated.removeListener(syncTabs);
+			chrome.tabs.onRemoved.removeListener(syncTabs);
+		}
+	}, []);
 
   return (
     <>
-			<h2>Tabs app v0</h2>
-			<div className="container">
-				<button onClick={removeAllTabsExceptCurrent}>Remove All</button>
-				<button onClick={groupTabs}>Group</button>
-			</div>
+			<form className="container" action={groupTabs}>
+				{/*<button onClick={removeAllTabsExceptCurrent}>Remove All</button>*/}
+				<Submit />
+			</form>
+
       <div className="container">
 				{tabList
 					.map((item) =>
 						<div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0px' }}>
-							{<picture>
-                  <img
-                    src={item.favIconUrl || 'https://cdn-icons-png.flaticon.com/128/3585/3585596.png'}
-                    style={{ height: '32px', width: 'auto', display: 'inline-block' }}
-                    alt="icon"
-                  />
-								</picture>}
+							{/*{<picture>*/}
+              {/*    <img*/}
+              {/*      src={item.favIconUrl || 'https://cdn-icons-png.flaticon.com/128/3585/3585596.png'}*/}
+              {/*      style={{ height: '32px', width: 'auto', display: 'inline-block' }}*/}
+              {/*      alt="icon"*/}
+              {/*    />*/}
+							{/*	</picture>}*/}
 							<p>{item.title}</p>
 						</div>)}
       </div>
-			<div className="container" style={{ paddingTop: '10px' }}>
-				<textarea style={{ width : '100%', height: '70px' }} placeholder="Ask anything about your tabs"></textarea>
-				<button>Ask</button>
-			</div>
+			{/*<div className="container" style={{ paddingTop: '10px' }}>*/}
+			{/*	<textarea style={{ width : '100%', height: '70px' }} placeholder="Ask anything about your tabs"></textarea>*/}
+			{/*	<button>Ask</button>*/}
+			{/*</div>*/}
     </>
   )
 }

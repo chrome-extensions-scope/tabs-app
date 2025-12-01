@@ -1,4 +1,5 @@
-import OpenAI from "openai";
+import OpenAI from 'openai';
+import type { FilteredTab, OpenAIResponse} from '../types';
 
 const MODEL = 'gpt-5-nano';
 
@@ -8,17 +9,7 @@ const client = new OpenAI({
 	dangerouslyAllowBrowser: true,
 });
 
-
-type Tab = {
-	id: number,
-	title: string,
-}
-
-type CategorizeTabsResponse = {
-	[key: string]: Tab[]
-}
-
-export const categorizeTabs = async (tabs: chrome.tabs.Tab[]): Promise<CategorizeTabsResponse> => {
+export const categorizeTabs = async (tabs: FilteredTab[]): Promise<OpenAIResponse> => {
 	const prompt = `
 You are a helpful assistant that groups browser tabs by context.
 
