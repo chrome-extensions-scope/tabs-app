@@ -4,15 +4,28 @@ import * as chromeAPI from './chrome-api'
 import * as openAIAPI from './openai-api';
 import * as utils from './utils';
 import type { FilteredTab } from './types';
-import './App.css';
+import { Button } from '@/components/ui/button.tsx';
+import { Badge } from '@/components/ui/badge.tsx';
+import { ThemeProvider } from '@/components/ui/theme-provider.tsx';
+import {
+	Item,
+	// ItemActions,
+	ItemContent,
+	ItemDescription,
+	ItemMedia,
+	ItemTitle,
+} from "@/components/ui/item"
+import { Spinner } from "@/components/ui/spinner"
+import { Layers } from "lucide-react"
 
+import './App.css';
 
 function Submit() {
 	const { pending } = useFormStatus();
 	return (
-		<button type="submit" disabled={pending}>
-			{pending ? 'Grouping...' : 'Group Tabs'}
-		</button>
+		<Button type="submit" disabled={pending} className="w-full cursor-pointer">
+			{pending ? <><Spinner /> Grouping...</> : <><Layers /> Group Tabs</>}
+		</Button>
 	);
 }
 
@@ -22,6 +35,10 @@ function App() {
 
 	const groupTabs = async () => {
 		const filteredTabs = utils.getFilteredTabs(tabList);
+		if (filteredTabs.length <= 0) {
+			return;
+		}
+
 		const result = await openAIAPI.categorizeTabs(filteredTabs);
 		await chromeAPI.groupTabs(result);
 	}
@@ -52,33 +69,45 @@ function App() {
 		}
 	}, []);
 
-  return (
-    <>
-			<form className="container" action={groupTabs}>
-				{/*<button onClick={removeAllTabsExceptCurrent}>Remove All</button>*/}
-				<Submit />
-			</form>
+	console.log('tabList', tabList);
 
-      <div className="container">
-				{tabList
-					.map((item) =>
-						<div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '0px' }}>
-							{/*{<picture>*/}
-              {/*    <img*/}
-              {/*      src={item.favIconUrl || 'https://cdn-icons-png.flaticon.com/128/3585/3585596.png'}*/}
-              {/*      style={{ height: '32px', width: 'auto', display: 'inline-block' }}*/}
-              {/*      alt="icon"*/}
-              {/*    />*/}
-							{/*	</picture>}*/}
-							<p>{item.title}</p>
-						</div>)}
-      </div>
-			{/*<div className="container" style={{ paddingTop: '10px' }}>*/}
-			{/*	<textarea style={{ width : '100%', height: '70px' }} placeholder="Ask anything about your tabs"></textarea>*/}
-			{/*	<button>Ask</button>*/}
-			{/*</div>*/}
-    </>
-  )
+  return (
+		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+			<div className="app flex h-full flex-col p-5">
+				<div className="header pb-5">
+					<Badge variant="secondary">{tabList.length} Tabs open</Badge>
+				</div>
+
+				<div className="main flex-grow mb-5 overflow-y-scroll">
+					{tabList.map(item =>
+						<Item key={item.id} variant="outline" className="mb-3">
+							<ItemMedia>
+								<picture>
+									<img
+										src={item.favIconUrl || 'https://cdn-icons-png.flaticon.com/128/3585/3585596.png'}
+										style={{ height: '32px', width: 'auto', display: 'inline-block' }}
+										alt="icon"
+									/>
+								</picture>
+							</ItemMedia>
+							<ItemContent>
+								<ItemTitle>{item.title}</ItemTitle>
+								<ItemDescription>
+									{item.url}
+								</ItemDescription>
+							</ItemContent>
+						</Item>)}
+				</div>
+
+				<div className="footer">
+					<form className="form mb-5" action={groupTabs}>
+						<Submit/>
+					</form>
+					<p className="mb-3 text-muted-foreground text-center">Click and don't close this window for grouping your tabs</p>
+				</div>
+			</div>
+		</ThemeProvider>
+	)
 }
 
 export default App
