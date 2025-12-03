@@ -16,9 +16,14 @@ import {
 	ItemTitle,
 } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
-import { Layers } from "lucide-react"
+import { Layers, Settings, ArrowLeft } from "lucide-react"
 
 import './App.css';
+
+const SCREEN = {
+	MAIN: 'MAIN',
+	SETTINGS: 'SETTINGS',
+}
 
 function Submit() {
 	const { pending } = useFormStatus();
@@ -32,6 +37,7 @@ function Submit() {
 function App() {
 	prefetchDNS('https://api.openai.com/v1/responses');
 	const [tabList, setTabList] = useState<FilteredTab[]>([]);
+	const [screen, setScreen] = useState<string>(SCREEN.MAIN);
 
 	const groupTabs = async () => {
 		const filteredTabs = utils.getFilteredTabs(tabList);
@@ -42,11 +48,6 @@ function App() {
 		const result = await openAIAPI.categorizeTabs(filteredTabs);
 		await chromeAPI.groupTabs(result);
 	}
-
-	// const removeAllTabsExceptCurrent = async () => {
-	// 	const tabs = await chromeAPI.removeAllTabsExceptCurrent();
-	// 	setTabList(tabs);
-	// }
 
 	useEffect(() => {
 		const syncTabs = async () => {
@@ -69,42 +70,66 @@ function App() {
 		}
 	}, []);
 
-	console.log('tabList', tabList);
+	const onSettingsClick = () => {
+		setScreen(SCREEN.SETTINGS);
+	};
+
+	const onArrowLeftClick = () => {
+		setScreen(SCREEN.MAIN);
+	};
 
   return (
 		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
 			<div className="app flex h-full flex-col p-5">
-				<div className="header pb-5">
-					<Badge variant="secondary">{tabList.length} Tabs open</Badge>
-				</div>
 
-				<div className="main flex-grow mb-5 overflow-y-scroll">
-					{tabList.map(item =>
-						<Item key={item.id} variant="outline" className="mb-3">
-							<ItemMedia>
-								<picture>
-									<img
-										src={item.favIconUrl || 'https://cdn-icons-png.flaticon.com/128/3585/3585596.png'}
-										style={{ height: '32px', width: 'auto', display: 'inline-block' }}
-										alt="icon"
-									/>
-								</picture>
-							</ItemMedia>
-							<ItemContent>
-								<ItemTitle>{item.title}</ItemTitle>
-								<ItemDescription>
-									{item.url}
-								</ItemDescription>
-							</ItemContent>
-						</Item>)}
-				</div>
+				{screen === SCREEN.MAIN && <>
+          <div className="header pb-5 flex justify-between">
+            <Badge variant="secondary">{tabList.length} Tabs open</Badge>
+            <Settings className="cursor-pointer" onClick={onSettingsClick} />
+          </div>
+				</>}
 
-				<div className="footer">
-					<form className="form mb-5" action={groupTabs}>
-						<Submit/>
-					</form>
-					<p className="mb-3 text-muted-foreground text-center">Click and don't close this window for grouping your tabs</p>
-				</div>
+				{screen === SCREEN.SETTINGS && <>
+          <div className="header pb-5">
+            <ArrowLeft className="cursor-pointer" onClick={onArrowLeftClick} />
+          </div>
+        </>}
+
+				{screen === SCREEN.MAIN && <>
+          <div className="main flex-grow mb-5 overflow-y-scroll">
+						{tabList.map(item =>
+							<Item key={item.id} variant="outline" className="mb-3">
+								<ItemMedia>
+									<picture>
+										<img
+											src={item.favIconUrl || 'https://cdn-icons-png.flaticon.com/128/3585/3585596.png'}
+											style={{ height: '32px', width: 'auto', display: 'inline-block' }}
+											alt="icon"
+										/>
+									</picture>
+								</ItemMedia>
+								<ItemContent>
+									<ItemTitle className="w-3xs overflow-hidden text-ellipsis">{item.title}</ItemTitle>
+									<ItemDescription className="w-3xs overflow-hidden text-ellipsis">
+										{item.url}
+									</ItemDescription>
+								</ItemContent>
+							</Item>)}
+						{tabList.length === 0 && <div className="mt-10 text-center text-xl font-semibold tracking-tight">No tabs opened</div>}
+          </div>
+
+          <div className="footer">
+            <form className="form mb-5" action={groupTabs}>
+              <Submit/>
+            </form>
+            <p className="mb-3 text-muted-foreground text-center">Click and don't close this window for grouping your tabs</p>
+          </div>
+				</>}
+
+				{screen === SCREEN.SETTINGS && <>
+					<div className="mt-20 text-center text-xl font-semibold tracking-tight">Settings Screen - Coming Soon!</div>
+				</>}
+
 			</div>
 		</ThemeProvider>
 	)

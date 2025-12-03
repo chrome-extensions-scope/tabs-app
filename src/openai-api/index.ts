@@ -1,7 +1,10 @@
 import OpenAI from 'openai';
+import { setDefaultOpenAIClient, Agent, run } from '@openai/agents';
 import type { FilteredTab, OpenAIResponse} from '../types';
 
-const MODEL = 'gpt-5-nano';
+// 9 tabs
+const MODEL = 'gpt-5-nano'; // $0.05 = 21s, 30s
+// const MODEL = 'gpt-4o-mini';   // $0.15 = 11s, 8s
 
 // TODO fix it
 const client = new OpenAI({
@@ -9,8 +12,9 @@ const client = new OpenAI({
 	dangerouslyAllowBrowser: true,
 });
 
-export const categorizeTabs = async (tabs: FilteredTab[]): Promise<OpenAIResponse> => {
-	const prompt = `
+setDefaultOpenAIClient(client);
+
+const prompt = `
 You are a helpful assistant that groups browser tabs by context.
 
 Rules:
@@ -30,17 +34,21 @@ Expected output:
   "Cooking": [
   	{"title": "Cooking pasta recipe", "id": 1530656077}
   ]
-}
+}`;
 
-Now group the following tabs:
-${JSON.stringify(tabs)}
-`;
+const categorizeAgent = new Agent({
+	name: 'Categorize Agent',
+	instructions: prompt,
+	model: MODEL, // optional – falls back to the default model
+	tools: [],
+});
 
-	const response = await client.responses.create({
-		model: MODEL,
-		input: prompt,
-	});
+export const categorizeTabs = async (tabs: FilteredTab[]): Promise<OpenAIResponse> => {
 
-	return JSON.parse(response.output_text);
+	const result = await run(
+		categorizeAgent,
+		JSON.stringify(tabs),
+	);
+	return JSON.parse(result.finalOutput || '');
 }
 

@@ -131,16 +131,4 @@
     /*border-radius: 16px;*/
 }
 
-#root::after {
-    position: absolute;
-    content: '';
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: -1;
-
-    background: #0b3738;
-    background: linear-gradient(140deg, #0b364996 0% 2%, #0a0a0a 28% 96%, #082523);}
-
 
