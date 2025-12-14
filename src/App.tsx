@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { prefetchDNS, useFormStatus } from 'react-dom';
+import debounce from 'lodash.debounce';
 import * as chromeAPI from './chrome-api'
-import * as openAIAPI from './openai-api';
+import * as geminiAPI from './gemini-api';
 import * as utils from './utils';
 import type { FilteredTab } from './types';
 import { Button } from '@/components/ui/button.tsx';
+import { EmptyTab } from '@/components/ui/EmptyTab.tsx';
 import { Badge } from '@/components/ui/badge.tsx';
 import { ThemeProvider } from '@/components/ui/theme-provider.tsx';
 import {
@@ -45,7 +47,7 @@ function App() {
 			return;
 		}
 
-		const result = await openAIAPI.categorizeTabs(filteredTabs);
+		const result = await geminiAPI.categorizeTabs(filteredTabs);
 		await chromeAPI.groupTabs(result);
 	}
 
@@ -53,20 +55,21 @@ function App() {
 		const syncTabs = async () => {
 			const tabList = await chromeAPI.getTabsCurrentWindow();
 			const filteredTabs = utils.getFilteredTabs(tabList);
+			console.log('filteredTabs', filteredTabs);
 			setTabList(filteredTabs);
 		};
 
 		async function setup() {
 			await syncTabs();
 
-			chrome.tabs.onCreated.addListener(syncTabs);
 			chrome.tabs.onRemoved.addListener(syncTabs);
+			chrome.tabs.onUpdated.addListener(debounce(syncTabs, 500));
 		}
 		setup();
 
 		return () => {
-			chrome.tabs.onCreated.removeListener(syncTabs);
 			chrome.tabs.onRemoved.removeListener(syncTabs);
+			chrome.tabs.onUpdated.removeListener(syncTabs);
 		}
 	}, []);
 
@@ -97,20 +100,22 @@ function App() {
 
 				{screen === SCREEN.MAIN && <>
           <div className="main flex-grow mb-5 overflow-y-scroll">
-						{tabList.map(item =>
+						{tabList.map((item) =>
 							<Item key={item.id} variant="outline" className="mb-3">
-								<ItemMedia>
-									<picture>
+								<ItemMedia className="!self-center">
+									{!item.favIconUrl ? <EmptyTab /> : <picture>
 										<img
-											src={item.favIconUrl || 'https://cdn-icons-png.flaticon.com/128/3585/3585596.png'}
-											style={{ height: '32px', width: 'auto', display: 'inline-block' }}
+											src={item.favIconUrl}
+											style={{ height: '24px', width: '24px' }}
 											alt="icon"
 										/>
-									</picture>
+									</picture>}
 								</ItemMedia>
 								<ItemContent>
-									<ItemTitle className="w-3xs overflow-hidden text-ellipsis">{item.title}</ItemTitle>
-									<ItemDescription className="w-3xs overflow-hidden text-ellipsis">
+									<ItemTitle className="w-3xs overflow-hidden text-ellipsis whitespace-nowrap block">
+										{item.title}
+									</ItemTitle>
+									<ItemDescription className="w-3xs overflow-hidden text-ellipsis whitespace-nowrap">
 										{item.url}
 									</ItemDescription>
 								</ItemContent>
