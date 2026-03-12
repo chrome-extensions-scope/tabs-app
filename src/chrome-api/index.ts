@@ -31,7 +31,7 @@ export const groupTabs = async (prop: GroupTabsPayload): Promise<void> => {
 				.filter((id): id is number => id !== undefined);
 
 			// @ts-ignore
-			const groupId = await window.chrome.tabs.group({ tabIds });
+			const groupId = await window.chrome.tabs.group({ tabIds,  });
 			// @ts-ignore
 			window.chrome.tabGroups.update(groupId, { title: category });
 			return groupId;

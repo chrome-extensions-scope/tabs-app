@@ -18,13 +18,12 @@ import {
 	ItemTitle,
 } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
-import { Layers, Settings, ArrowLeft } from "lucide-react"
+import { Layers } from "lucide-react"
 
 import './App.css';
 
 const SCREEN = {
 	MAIN: 'MAIN',
-	SETTINGS: 'SETTINGS',
 }
 
 function Submit() {
@@ -37,7 +36,7 @@ function Submit() {
 }
 
 function App() {
-	prefetchDNS('https://api.openai.com/v1/responses');
+	prefetchDNS('https://generativelanguage.googleapis.com');
 	const [tabList, setTabList] = useState<FilteredTab[]>([]);
 	const [screen, setScreen] = useState<string>(SCREEN.MAIN);
 
@@ -55,8 +54,14 @@ function App() {
 		const syncTabs = async () => {
 			const tabList = await chromeAPI.getTabsCurrentWindow();
 			const filteredTabs = utils.getFilteredTabs(tabList);
-			console.log('filteredTabs', filteredTabs);
+
 			setTabList(filteredTabs);
+
+			filteredTabs.map(tab => {
+				if (tab.groupId && tab.groupId >= 0) {
+					chrome.tabGroups.get(tab.groupId).then(console.log);
+				}
+			})
 		};
 
 		async function setup() {
@@ -64,6 +69,7 @@ function App() {
 
 			chrome.tabs.onRemoved.addListener(syncTabs);
 			chrome.tabs.onUpdated.addListener(debounce(syncTabs, 500));
+			chrome.tabGroups.onCreated.addListener((e) => {});
 		}
 		setup();
 
@@ -73,68 +79,44 @@ function App() {
 		}
 	}, []);
 
-	const onSettingsClick = () => {
-		setScreen(SCREEN.SETTINGS);
-	};
-
-	const onArrowLeftClick = () => {
-		setScreen(SCREEN.MAIN);
-	};
-
   return (
 		<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
 			<div className="app flex h-full flex-col p-5">
 
-				{screen === SCREEN.MAIN && <>
-          <div className="header pb-5 flex justify-between">
-            <Badge variant="secondary">{tabList.length} Tabs open</Badge>
-            <Settings className="cursor-pointer" onClick={onSettingsClick} />
-          </div>
-				</>}
+				<div className="header pb-5 flex justify-between">
+					<Badge variant="secondary">{tabList.length} Tabs open</Badge>
+				</div>
 
-				{screen === SCREEN.SETTINGS && <>
-          <div className="header pb-5">
-            <ArrowLeft className="cursor-pointer" onClick={onArrowLeftClick} />
-          </div>
-        </>}
+				<div className="main flex-grow mb-5 overflow-y-scroll">
+					{tabList.map((item) =>
+						<Item key={item.id} variant="outline" className="mb-3">
+							<ItemMedia className="self-center!">
+								{!item.favIconUrl ? <EmptyTab /> : <picture>
+									<img
+										src={item.favIconUrl}
+										style={{ height: '24px', width: '24px' }}
+										alt="icon"
+									/>
+								</picture>}
+							</ItemMedia>
+							<ItemContent>
+								<ItemTitle className="w-3xs overflow-hidden text-ellipsis whitespace-nowrap block">
+									{item.title}
+								</ItemTitle>
+								<ItemDescription className="w-3xs overflow-hidden text-ellipsis whitespace-nowrap">
+									{item.url}
+								</ItemDescription>
+							</ItemContent>
+						</Item>)}
+					{tabList.length === 0 && <div className="mt-10 text-center text-xl font-semibold tracking-tight">No tabs opened</div>}
+				</div>
 
-				{screen === SCREEN.MAIN && <>
-          <div className="main flex-grow mb-5 overflow-y-scroll">
-						{tabList.map((item) =>
-							<Item key={item.id} variant="outline" className="mb-3">
-								<ItemMedia className="!self-center">
-									{!item.favIconUrl ? <EmptyTab /> : <picture>
-										<img
-											src={item.favIconUrl}
-											style={{ height: '24px', width: '24px' }}
-											alt="icon"
-										/>
-									</picture>}
-								</ItemMedia>
-								<ItemContent>
-									<ItemTitle className="w-3xs overflow-hidden text-ellipsis whitespace-nowrap block">
-										{item.title}
-									</ItemTitle>
-									<ItemDescription className="w-3xs overflow-hidden text-ellipsis whitespace-nowrap">
-										{item.url}
-									</ItemDescription>
-								</ItemContent>
-							</Item>)}
-						{tabList.length === 0 && <div className="mt-10 text-center text-xl font-semibold tracking-tight">No tabs opened</div>}
-          </div>
-
-          <div className="footer">
-            <form className="form mb-5" action={groupTabs}>
-              <Submit/>
-            </form>
-            <p className="mb-3 text-muted-foreground text-center">Click and don't close this window for grouping your tabs</p>
-          </div>
-				</>}
-
-				{screen === SCREEN.SETTINGS && <>
-					<div className="mt-20 text-center text-xl font-semibold tracking-tight">Settings Screen - Coming Soon!</div>
-				</>}
-
+				<div className="footer">
+					<form className="form mb-5" action={groupTabs}>
+						<Submit/>
+					</form>
+					<p className="mb-3 text-muted-foreground text-center">Click and don't close this window for grouping your tabs</p>
+				</div>
 			</div>
 		</ThemeProvider>
 	)

@@ -1,7 +1,7 @@
 
 export type ChromeTab = chrome.tabs.Tab;
 
-export type FilteredTab = Pick<ChromeTab, 'id' | 'title' | 'url' | 'favIconUrl'>;
+export type FilteredTab = Pick<ChromeTab, 'id' | 'title' | 'url' | 'favIconUrl' | 'groupId'>;
 
 export type OpenAIResponse = {
 	[key: string]: Pick<ChromeTab, 'id' | 'title'>[]
