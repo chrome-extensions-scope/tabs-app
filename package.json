@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "build-dev": "tsc -b && vite build --watch",
+    "build-crx": "pnpm run build && pnpm dlx crx pack ./dist -o browser-extension.crx",
     "lint": "eslint .",
     "preview": "vite preview"
   },
