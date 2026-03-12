@@ -22,10 +22,6 @@ import { Layers } from "lucide-react"
 
 import './App.css';
 
-const SCREEN = {
-	MAIN: 'MAIN',
-}
-
 function Submit() {
 	const { pending } = useFormStatus();
 	return (
@@ -38,7 +34,6 @@ function Submit() {
 function App() {
 	prefetchDNS('https://generativelanguage.googleapis.com');
 	const [tabList, setTabList] = useState<FilteredTab[]>([]);
-	const [screen, setScreen] = useState<string>(SCREEN.MAIN);
 
 	const groupTabs = async () => {
 		const filteredTabs = utils.getFilteredTabs(tabList);
@@ -69,7 +64,6 @@ function App() {
 
 			chrome.tabs.onRemoved.addListener(syncTabs);
 			chrome.tabs.onUpdated.addListener(debounce(syncTabs, 500));
-			chrome.tabGroups.onCreated.addListener((e) => {});
 		}
 		setup();
 
